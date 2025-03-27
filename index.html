@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>时光信件</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            overflow-x: hidden;
+            touch-action: pan-y;
+            cursor: pointer;
+        }
+
+        .scene {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            transition: opacity 0.8s ease, transform 0.8s ease;
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+        }
+
+        .scene.active {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        #scene1 {
+            background-color: #ffebee;
+        }
+
+        #scene2 {
+            background-color: #e8f5e9;
+        }
+
+        .character-img {
+            width: 200px;
+            height: 300px;
+            object-fit: contain;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: transform 0.5s ease;
+        }
+
+        .character-img:hover {
+            transform: scale(1.05);
+        }
+
+        .desk {
+            width: 250px;
+            height: 20px;
+            background-color: #795548;
+            position: absolute;
+            bottom: 100px;
+            border-radius: 5px;
+        }
+
+        .paper {
+            width: 180px;
+            height: 120px;
+            background-color: #fff9e6;
+            position: absolute;
+            bottom: 120px;
+            border-radius: 3px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            padding: 15px;
+            text-align: center;
+            background-image:
+                    linear-gradient(#f5d0a2 1px, transparent 1px),
+                    linear-gradient(90deg, #f5d0a2 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 0;
+            border: 1px solid #e0c097;
+            overflow: hidden;
+        }
+
+        .writing-text {
+            position: relative;
+            color: #5c3a21;
+            font-family: 'Ma Shan Zheng', cursive, sans-serif;
+        }
+
+        .writing-text::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #fff9e6;
+            animation: writing 2s steps(20) forwards;
+        }
+
+        @keyframes writing {
+            to { left: 100%; }
+        }
+
+        .pencil {
+            position: absolute;
+            width: 30px;
+            height: 5px;
+            background-color: #ff9e2c;
+            bottom: 130px;
+            right: 50px;
+            transform: rotate(15deg);
+            animation: pencil-move 2s ease-in-out infinite;
+            z-index: 10;
+        }
+
+        .pencil::before {
+            content: "";
+            position: absolute;
+            width: 5px;
+            height: 15px;
+            background-color: #333;
+            top: -5px;
+            left: -3px;
+            transform: rotate(15deg);
+        }
+
+        @keyframes pencil-move {
+            0%, 100% { transform: translateX(0) rotate(15deg); }
+            50% { transform: translateX(20px) rotate(15deg); }
+        }
+
+        .ink-blot {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #5c3a21;
+            border-radius: 50%;
+            opacity: 0.3;
+        }
+
+        .ink-blot:nth-child(1) {
+            top: 15px;
+            left: 20px;
+            width: 8px;
+            height: 8px;
+        }
+
+        .ink-blot:nth-child(2) {
+            bottom: 25px;
+            right: 15px;
+            width: 6px;
+            height: 6px;
+        }
+
+        .letter {
+            width: 180px;
+            height: 120px;
+            background-color: #fff9e6;
+            position: absolute;
+            bottom: 100px;
+            border-radius: 5px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            display: none;
+            border: 1px solid #e0c097;
+        }
+
+        /* 修改后的信件内容样式 */
+        #letter-content {
+            width: 100%;
+            height: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: rgba(0,0,0,0.8);
+            z-index: 100;
+            display: none;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 20px 0;
+        }
+
+        .letter-paper {
+            width: 90%;
+            max-width: 400px;
+            min-height: 300px;
+            max-height: 80vh;
+            background-color: #fff9c4;
+            margin: 20px auto;
+            padding: 30px 20px;
+            border-radius: 5px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transform: scale(0.9);
+            opacity: 0;
+            transition: all 0.5s ease;
+            background-image:
+                    linear-gradient(#f5d0a2 1px, transparent 1px),
+                    linear-gradient(90deg, #f5d0a2 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 0;
+            border: 1px solid #e0c097;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .letter-paper.show {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .letter-date {
+            text-align: right;
+            font-style: italic;
+            margin-bottom: 20px;
+            color: #5c3a21;
+        }
+
+        .letter-text {
+            margin-bottom: 20px;
+            line-height: 1.8;
+            color: #5c3a21;
+            overflow-y: auto;
+        }
+
+        .letter-signature {
+            display: none;
+            text-align: right;
+            font-style: italic;
+            margin-top: 30px;
+            color: #5c3a21;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background-color: #ff9e2c;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            margin-top: 20px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #ff8c00;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+        }
+
+        .close-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            z-index: 101;
+        }
+
+        .close-btn:hover {
+            background-color: #ff5252;
+            transform: rotate(90deg);
+        }
+
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255,255,255,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #ff9e2c;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .audio-control {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background-color: #ff9e2c;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .audio-control:hover {
+            transform: scale(1.1);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: #5c3a21;
+            font-family: 'Ma Shan Zheng', cursive, sans-serif;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .typing-text {
+            opacity: 0;
+            animation: typing 0.5s forwards;
+            margin-bottom: 15px;
+            font-family: 'Ma Shan Zheng', cursive, sans-serif;
+        }
+
+        @keyframes typing {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .letter-paper:before {
+            content: "";
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #f5d0a2;
+        }
+
+        .stamp {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: #ff6b6b;
+            border-radius: 50%;
+            top: 20px;
+            right: 20px;
+            opacity: 0.7;
+            transform: rotate(15deg);
+        }
+
+        .stamp::after {
+            content: "邮";
+            position: absolute;
+            color: white;
+            font-size: 20px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .hint-text {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: rgba(0,0,0,0.6);
+            font-size: 14px;
+            animation: hintPulse 2s infinite;
+        }
+
+        @keyframes hintPulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="loader">
+    <div class="spinner"></div>
+</div>
+
+<div class="scene" id="scene1">
+    <img src="1.jpg" alt="写信" class="character-img" id="child-img">
+    <div class="desk"></div>
+    <div class="paper">
+        <div class="writing-text">正在写信...</div>
+        <div class="ink-blot"></div>
+        <div class="ink-blot"></div>
+    </div>
+    <div class="pencil"></div>
+</div>
+
+<div class="scene" id="scene2">
+    <img src="2.jpg" alt="读信" class="character-img" id="woman-img">
+    <h2>2043年，她打开了这封信</h2>
+    <button class="btn" id="read-btn2">阅读信件</button>
+</div>
+
+<div id="letter-content">
+    <button class="close-btn" id="close-btn">×</button>
+    <div class="letter-paper">
+        <div class="stamp"></div>
+        <div class="letter-date">2025年3月27日</div>
+        <div class="letter-text" id="letter-text">
+            <!-- 内容将通过JavaScript动态添加 -->
+        </div>
+        <div class="letter-signature" id="letter-signature">
+            <p>永远爱你的</p>
+            <p>10岁的小晔</p>
+        </div>
+    </div>
+</div>
+
+<div class="audio-control" id="audio-control">
+    <span>🔊</span>
+</div>
+
+<div class="hint-text">点击屏幕任意位置切换场景</div>
+
+<audio id="bgm" loop>
+    <source src="background_music.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 预加载图片
+        const images = ['1.jpg', '2.jpg'];
+        let loadedImages = 0;
+
+        images.forEach(src => {
+            const img = new Image();
+            img.src = src;
+            img.onload = () => {
+                loadedImages++;
+                if (loadedImages === images.length) {
+                    setTimeout(function() {
+                        document.querySelector('.loader').style.display = 'none';
+                        switchScene('scene1');
+                    }, 500);
+                }
+            };
+            img.onerror = () => {
+                loadedImages++;
+                console.error('图片加载失败:', src);
+                if (loadedImages === images.length) {
+                    document.querySelector('.loader').style.display = 'none';
+                    switchScene('scene1');
+                }
+            };
+        });
+
+        // 场景切换功能
+        const scene1 = document.getElementById('scene1');
+        const scene2 = document.getElementById('scene2');
+        let currentScene = 'scene1';
+
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.btn') || e.target.closest('#letter-content')) {
+                return;
+            }
+
+            if (currentScene === 'scene1') {
+                switchScene('scene2');
+            } else {
+                switchScene('scene1');
+            }
+        });
+
+        function switchScene(sceneId) {
+            if (sceneId === 'scene1') {
+                scene1.classList.add('active');
+                scene2.classList.remove('active');
+                currentScene = 'scene1';
+            } else {
+                scene2.classList.add('active');
+                scene1.classList.remove('active');
+                currentScene = 'scene2';
+                setTimeout(function() {
+                    document.querySelector('.letter').style.display = 'block';
+                }, 500);
+            }
+        }
+
+        // 信件内容
+        const letterContent = [
+            "致未来的自己:",
+            "小晔，您好吗?",
+            "此刻的你已经二十八岁了，你的样貌变了吗?",
+            "是否有变得成熟一点?",
+            "此刻的我期望你改掉的那些稚嫩毛病，已经改掉了吗?",
+            "将来的你做事情还那么冲动吗?",
+            "还是你始终没有变，依旧那么天真，",
+            "依旧那么爱做梦，依旧那么感情用事。",
+            "将来的你看感人的电视还会哭吗?",
+            "将来的你还会由于一点都不好笑的事傻傻的笑吗?",
+            "此刻我一向期盼的减肥你胜利了吗?",
+            "将来的你学会做饭了吗?",
+            "将来的你还会在周末和朋友出去疯玩吗?",
+            "其实我最想明白的是将来的你在发现这封信的时候幸福吗?",
+            "将来的你可要好好感谢此刻的我，",
+            "正是有了我的努力，我的辛苦才有了你将来的幸福，",
+            "所以将来的你必需好好好珍惜这种幸福。",
+            "我能够想象在一起的你们会常常吵架，",
+            "你要掌握自己的脾气啊，",
+            "记住你已经二十八岁了，不能再像我一样任性了。",
+            "要加油哦！"
+        ];
+
+        document.getElementById('read-btn2').addEventListener('click', function(e) {
+            e.stopPropagation();
+            showLetter();
+        });
+
+        function showLetter() {
+            const letterContentElement = document.getElementById('letter-content');
+            letterContentElement.style.display = 'block';
+
+            // 重置滚动位置
+            letterContentElement.scrollTop = 0;
+            document.querySelector('.letter-paper').scrollTop = 0;
+
+            setTimeout(function() {
+                document.querySelector('.letter-paper').classList.add('show');
+
+                const letterTextElement = document.getElementById('letter-text');
+                letterTextElement.innerHTML = '';
+
+                letterContent.forEach((line, index) => {
+                    setTimeout(() => {
+                        const p = document.createElement('p');
+                        p.className = 'typing-text';
+                        p.style.animationDelay = `${index * 0.3}s`;
+                        p.textContent = line;
+                        letterTextElement.appendChild(p);
+                        if(index === letterContent.length - 1) {
+                            setTimeout(()=>{
+                                document.getElementById('letter-signature').style.display = 'block'
+                            },300)
+                        }
+                    }, index * 300);
+                });
+            }, 300);
+        }
+
+        document.getElementById('close-btn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            document.getElementById('letter-content').style.display = 'none';
+            document.querySelector('.letter-paper').classList.remove('show');
+            document.getElementById('letter-text').innerHTML = '';
+            document.getElementById('letter-signature').style.display = 'none';
+        });
+
+        // 音频控制
+        const audioControl = document.getElementById('audio-control');
+        const bgm = document.getElementById('bgm');
+        let isMuted = false;
+
+        audioControl.addEventListener('click', function(e) {
+            e.stopPropagation();
+            isMuted = !isMuted;
+            bgm.muted = isMuted;
+            audioControl.innerHTML = isMuted ? '<span>🔇</span>' : '<span>🔊</span>';
+        });
+
+        document.addEventListener('click', function() {
+            bgm.play().catch(e => {
+                console.log('自动播放被阻止:', e);
+            });
+        }, { once: true });
+
+        document.addEventListener('touchstart', function() {
+            bgm.play().catch(e => {
+                console.log('自动播放被阻止:', e);
+            });
+        }, { once: true });
+
+        // 防止缩放
+        document.addEventListener('touchmove', function(e) {
+            if (e.scale !== 1) { e.preventDefault(); }
+        }, { passive: false });
+
+        // 添加触摸事件处理，确保信件内容可以滚动
+        document.querySelector('.letter-paper').addEventListener('touchmove', function(e) {
+            e.stopPropagation();
+        }, { passive: false });
+    });
+</script>
+</body>
+</html>
